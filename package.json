@@ -1,0 +1,12 @@
+{
+  "name": "onboarding-ico",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Uxio",
+  "license": "MIT",
+  "dependencies": {
+    "@gnosis.pm/util-contracts": "^1.0.1",
+    "canonical-weth": "^1.0.0",
+    "truffle-contract": "^3.0.6"
+  }
+}
