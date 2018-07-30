@@ -7,7 +7,7 @@ import "./TokenSCM.sol";
 // import "./SafeMath.sol";
 
 contract IcoSCM {
-  uint public constant maxWeth = 1000e18;
+  uint public constant wethToRaise = 1000 ether;
   uint public constant scmPerWeth = 10;
   uint public storedWeth = 0;
   uint public closedOn = 0;
@@ -24,15 +24,15 @@ contract IcoSCM {
   }
 
   function invest(uint amountWei) public returns (bool) {
-      // Don't invest more than maxWeth
-      if (amountWei + storedWeth >= maxWeth) {
-        amountWei = maxWeth - storedWeth;
+      // Don't invest more than wethToRaise
+      if (amountWei + storedWeth >= wethToRaise) {
+        amountWei = wethToRaise - storedWeth;
         closedOn = now;
       }
 
       require(weth9.transferFrom(msg.sender, address(this), amountWei), "Cannot transfer WEth");
       storedWeth += amountWei;
-      balances[msg.sender] = amountWei * scmPerWeth;
+      balances[msg.sender] = balances[msg.sender] + amountWei * scmPerWeth;
       return true;
   }
 
