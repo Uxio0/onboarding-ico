@@ -17,6 +17,8 @@ contract IcoSCM {
   WETH9 public weth9;
 
   event Claim(address indexed user, uint amount);
+  event Invest(address indexed user, uint amount);
+  event Closed(address user, uint when);
 
   constructor(address tokenAddress, address wethAddress) public {
       tokenSCM = TokenSCM(tokenAddress);
@@ -28,11 +30,13 @@ contract IcoSCM {
       if (amountWei + storedWeth >= wethToRaise) {
         amountWei = wethToRaise - storedWeth;
         closedOn = now;
+        emit Closed(msg.sender, closedOn);
       }
 
       require(weth9.transferFrom(msg.sender, address(this), amountWei), "Cannot transfer WEth");
       storedWeth += amountWei;
-      balances[msg.sender] = balances[msg.sender] + amountWei * scmPerWeth;
+      balances[msg.sender] += amountWei * scmPerWeth;
+      emit Invest(msg.sender, amountWei);
       return true;
   }
 

@@ -7,7 +7,7 @@ contract TokenSCM is StandardToken {
 	string public constant name = "Scam";
 	uint8 public constant decimals = 18;
 
-	function TokenSCM(uint amount) public {
+	constructor(uint amount) public {
 		totalTokens = amount;
 		balances[msg.sender] = amount;
 	}
