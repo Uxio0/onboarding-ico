@@ -35,17 +35,18 @@ contract IcoSCM {
 
       require(weth9.transferFrom(msg.sender, address(this), amountWei), "Cannot transfer WEth");
       storedWeth += amountWei;
-      balances[msg.sender] += amountWei * scmPerWeth;
+      balances[msg.sender] += amountWei;
       emit Invest(msg.sender, amountWei);
       return true;
   }
 
   function claim() public returns (bool) {
     require(closedOn > 0 && (closedOn + 2 minutes) < now, "Ico not closed");
-    uint tokens = balances[msg.sender];
+    uint tokens = balances[msg.sender] * scmPerWeth;
     bool tokensFound = tokens > 0;
     if (tokensFound) {
         tokenSCM.transfer(msg.sender, tokens);
+	delete balances[msg.sender];
         emit Claim(msg.sender, tokens);
     }
     return tokensFound;

@@ -25,6 +25,7 @@ contract('Ico', function(accounts) {
 
     // Invest remaining 1 ether
     assert.ok(icoSCM.invest(totalWeisToInvest - weisToInvest))
+    assert.equal(await icoSCM.balances.call(accounts[0]), totalWeisToInvest)
 
     // Now ico should be closed
     assert.ok(await icoSCM.closedOn() > 0)
@@ -42,5 +43,6 @@ contract('Ico', function(accounts) {
     web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: 0})
     assert.ok(await icoSCM.claim())
     assert.equal(await tokenSCM.balanceOf.call(accounts[0]), expectedTokens)
+    assert.equal(await icoSCM.balances.call(accounts[0]), 0)
   })
 })
