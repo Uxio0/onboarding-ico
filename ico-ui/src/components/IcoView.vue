@@ -1,6 +1,5 @@
 <template>
   <div class="hello">
-    <h1>{{ msg }}</h1>
     <h1>{{ coinbase }}</h1>
     <h2>Balance {{ balanceEther }}Ξ</h2>
     <h2>Weth Balance {{ wethBalanceEther }}Ξ</h2>
@@ -22,24 +21,17 @@
 </template>
 
 <script>
-import Web3 from 'web3'
-import contract from 'truffle-contract'
-import icoJson from '../../../build/contracts/IcoSCM.json'
-import tokenJson from '../../../build/contracts/TokenSCM.json'
-import weth9Json from '../../../build/contracts/WETH9.json'
+import { getWeb3, getIco, getToken, getWeth } from '../metamask.js'
 
-const Ico = contract(icoJson)
-const Token = contract(tokenJson)
-const Weth = contract(weth9Json)
+const web3 = getWeb3()
 
 export default {
-  name: 'HelloWorld',
+  name: 'IcoView',
   props: {
-    msg: String
+    coinbase: String
   },
   data() {
     return {
-      coinbase: null,
       balance: 0,
       scmBalance: 0,
       wethBalance: 0,
@@ -58,24 +50,11 @@ export default {
     this.loadWeb3()
   },
   methods: {
-    async loadWeb3() {
-      if (typeof web3 !== 'undefined') {
-        // eslint-disable-next-line
-        console.warn("Using web3 detected from external source. If you find that your accounts don't appear or you have 0 Fluyd, ensure you've configured that source properly. If using MetaMask, see the following link. Feel free to delete this warning. :) http://truffleframework.com/tutorials/truffle-and-metamask")
-
-        // Use Mist/MetaMask's provider
-        // eslint-disable-next-line
-        let w3 = new Web3(web3.currentProvider)
-        this.$set(this, 'web3', () => w3)
-        Ico.setProvider(w3.currentProvider)
-        Token.setProvider(w3.currentProvider)
-        Weth.setProvider(w3.currentProvider)
-
-        let [weth, token, ico] = await Promise.all([Weth.deployed(), Token.deployed(), Ico.deployed()])
+    loadWeb3() {
+      Promise.all([getWeth(), getToken(), getIco()]).then(([weth, token, ico]) => {
         this.$set(this, 'weth', () => weth)
         this.$set(this, 'token', () => token)
         this.$set(this, 'ico', () => ico)
-
         weth.Deposit((error, result) => {
           this.loadBalances(this.coinbase)
         })
@@ -91,17 +70,10 @@ export default {
           this.loadIcoStatus()
         })
         this.loadIcoStatus()
-        setInterval(() => {if (this.getCoinbase() != this.coinbase) this.loadCoinbase()}, 1000);
-      }
-    },
-    getCoinbase() {
-      return this.web3().eth.coinbase
-    },
-    loadCoinbase() {
-      this.$set(this, 'coinbase', this.getCoinbase())
+      })
     },
     loadBalances(address) {
-      let values = [this.web3(), this.weth(), this.token()]
+      let values = [web3, this.weth(), this.token()]
       if (values.every(x => x != null) && address != null ) {
         let [web3, weth, token] = values
         web3.eth.getBalance(address, (error, result) => this.$set(this, 'balance', result))
@@ -116,19 +88,19 @@ export default {
         this.ico().balances.call(this.coinbase).then(result => this.$set(this, 'icoInvested', result))
     },
     wrapEth() {
-      let weis = this.web3().toWei(this.ethToWrap, 'ether')
+      let weis = web3.toWei(this.ethToWrap, 'ether')
       this.weth().deposit({value: weis, from: this.coinbase})
       this.ethToWrap = 0
     },
     unwrapEth() {
-      let weis = this.web3().toWei(this.ethToWrap, 'ether')
+      let weis = web3.toWei(this.ethToWrap, 'ether')
       this.weth().withdraw(weis, {from: this.coinbase})
       this.ethToWrap = 0
     },
     async invest() {
-      let weisToInvest = this.web3().toBigNumber(this.web3().toWei(this.wethToInvest, 'ether'))
+      let weisToInvest = web3.toBigNumber(web3.toWei(this.wethToInvest, 'ether'))
       if (this.wethBalance != 0 && this.wethBalance.greaterThanOrEqualTo(weisToInvest)) {
-        let batch = this.web3().createBatch()
+        let batch = web3.createBatch()
         await this.weth().approve(this.ico().address, weisToInvest, {'from': this.coinbase})
         await this.ico().invest(weisToInvest, {'from': this.coinbase})
       }
@@ -148,19 +120,19 @@ export default {
       return (this.icoTimestamp == "0")?"Opened":"Closed"
     },
     balanceEther() {
-      return this.web3().fromWei(this.balance, 'ether').valueOf()
+      return web3.fromWei(this.balance, 'ether').valueOf()
     },
     wethBalanceEther() {
-      return this.web3().fromWei(this.wethBalance, 'ether').valueOf()
+      return web3.fromWei(this.wethBalance, 'ether').valueOf()
     },
     scmBalanceEther() {
-      return this.web3().fromWei(this.scmBalance, 'ether').valueOf()
+      return web3.fromWei(this.scmBalance, 'ether').valueOf()
     },
     icoTotalInvestedEther() {
-      return this.web3().fromWei(this.icoTotalInvested, 'ether').valueOf()
+      return web3.fromWei(this.icoTotalInvested, 'ether').valueOf()
     },
     icoInvestedEther() {
-      return this.web3().fromWei(this.icoInvested, 'ether').valueOf()
+      return web3.fromWei(this.icoInvested, 'ether').valueOf()
     },
   }
 }

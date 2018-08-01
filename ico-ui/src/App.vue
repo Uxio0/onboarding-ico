@@ -1,24 +1,38 @@
 <template>
   <div id="app">
     <img src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <IcoView :coinbase="coinbase" v-if="coinbase" />
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import IcoView from "./components/IcoView.vue";
+import { getWeb3 } from "./metamask.js";
+
+const web3 = getWeb3();
 
 export default {
-  name: 'app',
+  name: "app",
   components: {
-    HelloWorld
+    IcoView
+  },
+  data() {
+    return {
+      coinbase: null
+    };
+  },
+  created() {
+    setInterval(() => {
+      if (web3.eth.coinbase != this.coinbase)
+        this.$set(this, "coinbase", web3.eth.coinbase);
+    }, 1000);
   }
-}
+};
 </script>
 
 <style>
 #app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+  font-family: "Avenir", Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
