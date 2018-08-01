@@ -2,11 +2,22 @@
   <div class="hello">
     <h1>{{ msg }}</h1>
     <h1>{{ coinbase }}</h1>
-    <h2>Balance {{ balance }}</h2>
-    <h2>Weth Balance {{ wethBalance }}</h2>
-    <button @click="wrapEth">Wrap Eth</button>
-    <h2>SCM Balance {{ scmBalance }}</h2>
+    <h2>Balance {{ balanceEther }}Ξ</h2>
+    <h2>Weth Balance {{ wethBalanceEther }}Ξ</h2>
+    <button @click="wrapEth">Wrap {{ ethToWrap }} Eth</button>
+    <button @click="unwrapEth">UnWrap {{ ethToWrap }} Eth</button>
+    <input type="number" min="1" max="1000" v-model="ethToWrap"></input>
+    <h2>SCM Balance {{ scmBalanceEther }}</h2>
+    <h2>Total Invested in Ico {{ icoTotalInvestedEther }}Ξ</h2>
+    <h2>Invested by {{ coinbase }} in Ico {{ icoInvestedEther }}Ξ</h2>
     <h2>Ico Status {{ icoStatus }}</h2>
+    <span v-if="icoTimestamp">
+      <button @click="claim" >Claim</button>
+    </span>
+    <span v-else>
+      <button @click="invest">Invest</button>
+      <input type="number" min="1" max="1000" v-model="wethToInvest"></input>
+    </span>
   </div>
 </template>
 
@@ -32,6 +43,10 @@ export default {
       balance: 0,
       scmBalance: 0,
       wethBalance: 0,
+      ethToWrap: 0,
+      wethToInvest: 0,
+      icoInvested: 0,
+      icoTotalInvested: 0,
       icoTimestamp: null,
       web3: () => null,
       weth: () => null,
@@ -62,9 +77,20 @@ export default {
         this.$set(this, 'ico', () => ico)
 
         weth.Deposit((error, result) => {
-          console.log(result)
-          this.loadBalances(this.coinbase) 
+          this.loadBalances(this.coinbase)
         })
+        weth.Withdrawal((error, result) => {
+          this.loadBalances(this.coinbase)
+        })
+        ico.Invest((error, result) => {
+          this.loadBalances(this.coinbase)
+          this.loadIcoStatus()
+        })
+        ico.Claim((error, result) => {
+          this.loadBalances(this.coinbase)
+          this.loadIcoStatus()
+        })
+        this.loadIcoStatus()
         setInterval(() => {if (this.getCoinbase() != this.coinbase) this.loadCoinbase()}, 1000);
       }
     },
@@ -78,30 +104,64 @@ export default {
       let values = [this.web3(), this.weth(), this.token()]
       if (values.every(x => x != null) && address != null ) {
         let [web3, weth, token] = values
-        web3.eth.getBalance(address, (error, result) => this.$set(this, 'balance', result.valueOf()))
-        weth.balanceOf.call(address).then(result => this.$set(this, 'wethBalance', result.valueOf()))
-        token.balanceOf.call(address).then(result => this.$set(this, 'scmBalance', result.valueOf()))
+        web3.eth.getBalance(address, (error, result) => this.$set(this, 'balance', result))
+        weth.balanceOf.call(address).then(result => this.$set(this, 'wethBalance', result))
+        token.balanceOf.call(address).then(result => this.$set(this, 'scmBalance', result))
       }
     },
     loadIcoStatus() {
-      let web3 = this.web3()
-      let ico = this.ico()
-      ico.closedOn.call().then(result => this.$set(this, 'icoTimestamp', result.valueOf()))
+      this.ico().closedOn.call().then(result => this.$set(this, 'icoTimestamp', result.valueOf()))
+      this.ico().storedWeth.call().then(result => this.$set(this, 'icoTotalInvested', result))
+      if (this.coinbase != null)
+        this.ico().balances.call(this.coinbase).then(result => this.$set(this, 'icoInvested', result))
     },
     wrapEth() {
-      let weis = this.web3().toWei(1, 'ether')
+      let weis = this.web3().toWei(this.ethToWrap, 'ether')
       this.weth().deposit({value: weis, from: this.coinbase})
-    }
+      this.ethToWrap = 0
+    },
+    unwrapEth() {
+      let weis = this.web3().toWei(this.ethToWrap, 'ether')
+      this.weth().withdraw(weis, {from: this.coinbase})
+      this.ethToWrap = 0
+    },
+    async invest() {
+      let weisToInvest = this.web3().toBigNumber(this.web3().toWei(this.wethToInvest, 'ether'))
+      if (this.wethBalance != 0 && this.wethBalance.greaterThanOrEqualTo(weisToInvest)) {
+        let batch = this.web3().createBatch()
+        await this.weth().approve(this.ico().address, weisToInvest, {'from': this.coinbase})
+        await this.ico().invest(weisToInvest, {'from': this.coinbase})
+      }
+    },
+    claim() {
+        this.ico().claim({'from': this.coinbase})
+    },
   },
   watch: {
     coinbase(address) {
       this.loadBalances(address)
+      this.loadIcoStatus()
     }
   },
   computed: {
     icoStatus() {
       return (this.icoTimestamp == "0")?"Opened":"Closed"
-    }
+    },
+    balanceEther() {
+      return this.web3().fromWei(this.balance, 'ether').valueOf()
+    },
+    wethBalanceEther() {
+      return this.web3().fromWei(this.wethBalance, 'ether').valueOf()
+    },
+    scmBalanceEther() {
+      return this.web3().fromWei(this.scmBalance, 'ether').valueOf()
+    },
+    icoTotalInvestedEther() {
+      return this.web3().fromWei(this.icoTotalInvested, 'ether').valueOf()
+    },
+    icoInvestedEther() {
+      return this.web3().fromWei(this.icoInvested, 'ether').valueOf()
+    },
   }
 }
 </script>
