@@ -2,32 +2,34 @@
   <div id="app">
     <img src="./assets/logo.png">
     <IcoView :coinbase="coinbase" v-if="coinbase" />
+    <span v-else>
+      <h1>Unlock metamask, please</h1>
+    </span>
   </div>
 </template>
 
 <script>
-import IcoView from "./components/IcoView.vue";
-import { getWeb3 } from "./metamask.js";
+import IcoView from './components/IcoView.vue'
+import { getWeb3 } from './metamask.js'
 
-const web3 = getWeb3();
+const web3 = getWeb3()
 
 export default {
-  name: "app",
+  name: 'app',
   components: {
     IcoView
   },
-  data() {
+  data () {
     return {
       coinbase: null
-    };
+    }
   },
-  created() {
+  created () {
     setInterval(() => {
-      if (web3.eth.coinbase != this.coinbase)
-        this.$set(this, "coinbase", web3.eth.coinbase);
-    }, 1000);
+      if (web3.eth.coinbase !== this.coinbase) { this.$set(this, 'coinbase', web3.eth.coinbase) }
+    }, 1000)
   }
-};
+}
 </script>
 
 <style>

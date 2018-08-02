@@ -9,29 +9,29 @@ const Ico = contract(icoJson)
 const Token = contract(tokenJson)
 const Weth = contract(weth9Json)
 
-function getWeb3() {
-      // Use Mist/MetaMask's provider
-      if (typeof web3 !== 'undefined') {
-        // eslint-disable-next-line
+function getWeb3 () {
+  // Use Mist/MetaMask's provider
+  if (typeof web3 !== 'undefined') {
+    // eslint-disable-next-line
         return new Web3(web3.currentProvider)
-      }
+  }
 }
 
-function deployed(my_contract)  {
+function deployed (my_contract) {
   let web3 = getWeb3()
   my_contract.setProvider(web3.currentProvider)
   return my_contract.deployed()
 }
 
-function getIco() {
+function getIco () {
   return deployed(Ico)
 }
 
-function getToken() {
+function getToken () {
   return deployed(Token)
 }
 
-function getWeth() {
+function getWeth () {
   return deployed(Weth)
 }
 

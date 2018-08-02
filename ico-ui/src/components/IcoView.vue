@@ -4,18 +4,24 @@
     <h2>Balance {{ balanceEther }}Ξ</h2>
     <h2>Weth Balance {{ wethBalanceEther }}Ξ</h2>
     <button @click="wrapEth">Wrap {{ ethToWrap }} Eth</button>
-    <button @click="unwrapEth">UnWrap {{ ethToWrap }} Eth</button>
-    <input type="number" min="1" max="1000" v-model="ethToWrap"></input>
+    <input type="number" min="1" max="1000" v-model="ethToWrap">
+    <span v-if="wethBalanceEther != '0'">
+      <button @click="unwrapEth">UnWrap {{ ethToUnwrap }} Eth</button>
+      <input type="number" min="1" max="1000" v-model="ethToUnwrap">
+    </span>
     <h2>SCM Balance {{ scmBalanceEther }}</h2>
     <h2>Total Invested in Ico {{ icoTotalInvestedEther }}Ξ</h2>
     <h2>Invested by {{ coinbase }} in Ico {{ icoInvestedEther }}Ξ</h2>
     <h2>Ico Status {{ icoStatus }}</h2>
-    <span v-if="icoTimestamp">
-      <button @click="claim" >Claim</button>
+    <span v-if="icoTimestamp == 0">
+      <span v-if="wethBalanceEther != '0'">
+        <button @click="invest">Invest</button>
+        <input type="number" min="1" max="1000" v-model="wethToInvest">
+      </span>
+      <h2 v-else>You need to wrap some ether to invest!</h2>
     </span>
-    <span v-else>
-      <button @click="invest">Invest</button>
-      <input type="number" min="1" max="1000" v-model="wethToInvest"></input>
+    <span v-else-if="icoInvestedEther > 0">
+      <button @click="claim" >Claim</button>
     </span>
   </div>
 </template>
@@ -30,12 +36,13 @@ export default {
   props: {
     coinbase: String
   },
-  data() {
+  data () {
     return {
       balance: 0,
       scmBalance: 0,
       wethBalance: 0,
       ethToWrap: 0,
+      ethToUnwrap: 0,
       wethToInvest: 0,
       icoInvested: 0,
       icoTotalInvested: 0,
@@ -46,94 +53,100 @@ export default {
       ico: () => null
     }
   },
-  created() {
-    this.loadWeb3()
+  async created () {
+    await this.loadWeb3()
+    await Promise.all([this.loadIcoStatus(), this.loadBalances()])
   },
   methods: {
-    loadWeb3() {
-      Promise.all([getWeth(), getToken(), getIco()]).then(([weth, token, ico]) => {
+    loadWeb3 () {
+      return Promise.all([getWeth(), getToken(), getIco()]).then(([weth, token, ico]) => {
         this.$set(this, 'weth', () => weth)
         this.$set(this, 'token', () => token)
         this.$set(this, 'ico', () => ico)
-        weth.Deposit((error, result) => {
+        weth.Deposit((_, result) => {
           this.loadBalances(this.coinbase)
         })
-        weth.Withdrawal((error, result) => {
+        weth.Withdrawal((_, result) => {
           this.loadBalances(this.coinbase)
         })
-        ico.Invest((error, result) => {
-          this.loadBalances(this.coinbase)
-          this.loadIcoStatus()
-        })
-        ico.Claim((error, result) => {
+        ico.Invest((_, result) => {
           this.loadBalances(this.coinbase)
           this.loadIcoStatus()
         })
-        this.loadIcoStatus()
+        ico.Claim((_, result) => {
+          this.loadBalances(this.coinbase)
+          this.loadIcoStatus()
+        })
       })
     },
-    loadBalances(address) {
+    loadBalances () {
+      let address = this.coinbase
       let values = [web3, this.weth(), this.token()]
-      if (values.every(x => x != null) && address != null ) {
+      if (values.every(x => x != null) && address != null) {
         let [web3, weth, token] = values
-        web3.eth.getBalance(address, (error, result) => this.$set(this, 'balance', result))
+        web3.eth.getBalance(address, (_, result) => this.$set(this, 'balance', result))
         weth.balanceOf.call(address).then(result => this.$set(this, 'wethBalance', result))
         token.balanceOf.call(address).then(result => this.$set(this, 'scmBalance', result))
       }
     },
-    loadIcoStatus() {
+    loadIcoStatus () {
       this.ico().closedOn.call().then(result => this.$set(this, 'icoTimestamp', result.valueOf()))
       this.ico().storedWeth.call().then(result => this.$set(this, 'icoTotalInvested', result))
-      if (this.coinbase != null)
-        this.ico().balances.call(this.coinbase).then(result => this.$set(this, 'icoInvested', result))
+      if (this.coinbase != null) { this.ico().balances.call(this.coinbase).then(result => this.$set(this, 'icoInvested', result)) }
     },
-    wrapEth() {
+    wrapEth () {
       let weis = web3.toWei(this.ethToWrap, 'ether')
       this.weth().deposit({value: weis, from: this.coinbase})
       this.ethToWrap = 0
     },
-    unwrapEth() {
-      let weis = web3.toWei(this.ethToWrap, 'ether')
+    unwrapEth () {
+      let weis = web3.toWei(this.ethToUnwrap, 'ether')
       this.weth().withdraw(weis, {from: this.coinbase})
       this.ethToWrap = 0
     },
-    async invest() {
+    async invest () {
       let weisToInvest = web3.toBigNumber(web3.toWei(this.wethToInvest, 'ether'))
-      if (this.wethBalance != 0 && this.wethBalance.greaterThanOrEqualTo(weisToInvest)) {
-        let batch = web3.createBatch()
+      if (this.wethBalance !== 0 && this.wethBalance.greaterThanOrEqualTo(weisToInvest)) {
         await this.weth().approve(this.ico().address, weisToInvest, {'from': this.coinbase})
-        await this.ico().invest(weisToInvest, {'from': this.coinbase})
+        let gas = 2 * await this.ico().invest.estimateGas(weisToInvest, {'from': this.coinbase})
+        return this.ico().invest(weisToInvest, {'from': this.coinbase, 'gas': gas})
       }
     },
-    claim() {
-        this.ico().claim({'from': this.coinbase})
-    },
+    async claim () {
+      let gas = 2 * await this.ico().claim.estimateGas({'from': this.coinbase})
+      this.ico().claim({'from': this.coinbase, 'gas': gas})
+    }
   },
   watch: {
-    coinbase(address) {
-      this.loadBalances(address)
+    coinbase (address) {
+      this.loadBalances()
       this.loadIcoStatus()
+    },
+    wethBalance (balance) {
+      let balanceEther = web3.fromWei(balance, 'ether').toNumber()
+      this.$set(this, 'ethToUnwrap', balanceEther)
+      this.$set(this, 'wethToInvest', balanceEther)
     }
   },
   computed: {
-    icoStatus() {
-      return (this.icoTimestamp == "0")?"Opened":"Closed"
+    icoStatus () {
+      return (this.icoTimestamp == '0') ? 'Opened' : 'Closed'
     },
-    balanceEther() {
+    balanceEther () {
       return web3.fromWei(this.balance, 'ether').valueOf()
     },
-    wethBalanceEther() {
+    wethBalanceEther () {
       return web3.fromWei(this.wethBalance, 'ether').valueOf()
     },
-    scmBalanceEther() {
+    scmBalanceEther () {
       return web3.fromWei(this.scmBalance, 'ether').valueOf()
     },
-    icoTotalInvestedEther() {
+    icoTotalInvestedEther () {
       return web3.fromWei(this.icoTotalInvested, 'ether').valueOf()
     },
-    icoInvestedEther() {
+    icoInvestedEther () {
       return web3.fromWei(this.icoInvested, 'ether').valueOf()
-    },
+    }
   }
 }
 </script>
