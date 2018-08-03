@@ -99,9 +99,10 @@ export default {
       this.weth().deposit({value: weis, from: this.coinbase})
       this.ethToWrap = 0
     },
-    unwrapEth () {
+    async unwrapEth () {
       let weis = web3.toWei(this.ethToUnwrap, 'ether')
-      this.weth().withdraw(weis, {from: this.coinbase})
+      let gas = 2 * await this.weth().withdraw.estimateGas(weis, {from: this.coinbase})
+      this.weth().withdraw(weis, {from: this.coinbase, 'gas': gas})
       this.ethToWrap = 0
     },
     async invest () {

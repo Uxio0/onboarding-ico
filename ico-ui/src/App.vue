@@ -2,9 +2,7 @@
   <div id="app">
     <img src="./assets/logo.png">
     <IcoView :coinbase="coinbase" v-if="coinbase" />
-    <span v-else>
-      <h1>Unlock metamask, please</h1>
-    </span>
+    <h1 v-else>Unlock metamask, please</h1>
   </div>
 </template>
 

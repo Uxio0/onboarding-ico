@@ -17,10 +17,10 @@ function getWeb3 () {
   }
 }
 
-function deployed (my_contract) {
+function deployed (myContract) {
   let web3 = getWeb3()
-  my_contract.setProvider(web3.currentProvider)
-  return my_contract.deployed()
+  myContract.setProvider(web3.currentProvider)
+  return myContract.deployed()
 }
 
 function getIco () {
