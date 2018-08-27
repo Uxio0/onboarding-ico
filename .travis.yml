@@ -1,0 +1,7 @@
+language: node
+cache: yarn
+dist: trusty
+install:
+  - travis_retry yarn install --dev
+script:
+  - yarn run coverage
