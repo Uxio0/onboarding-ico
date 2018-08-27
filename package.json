@@ -7,6 +7,7 @@
   "dependencies": {
     "@gnosis.pm/util-contracts": "^1.0.1",
     "canonical-weth": "^1.0.0",
+    "truffle": "^4.1.14",
     "truffle-contract": "^3.0.6",
     "truffle-hdwallet-provider-privkey": "^0.3.0",
     "web3": "^1.0.0-beta.35"
@@ -17,6 +18,6 @@
   "scripts": {
     "serve": "truffle deploy && cd ico-ui/ && yarn run serve",
     "test": "truffle test",
-    "coverage": "./node_modules/.bin/solidity-coverage" 
+    "coverage": "./node_modules/.bin/solidity-coverage"
   }
 }
