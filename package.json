@@ -10,5 +10,13 @@
     "truffle-contract": "^3.0.6",
     "truffle-hdwallet-provider-privkey": "^0.3.0",
     "web3": "^1.0.0-beta.35"
+  },
+  "devDependencies": {
+    "solidity-coverage": "^0.5.5"
+  },
+  "scripts": {
+    "serve": "truffle deploy && cd ico-ui/ && yarn run serve",
+    "test": "truffle test",
+    "coverage": "./node_modules/.bin/solidity-coverage" 
   }
 }
